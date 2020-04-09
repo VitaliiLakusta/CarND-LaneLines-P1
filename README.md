@@ -21,6 +21,8 @@ We find lane lines on a road by applying this set of operations in the pipeline:
 7. Remove outliers from detected lines. If video, remember line slopes over time, filter out outliers.
 8. Interpolate lane lines by applying least squares regression line.
 
+Jupyter notebook with implemented pipeline is [here](./P1.ipynb).
+
 ---
 
 ### Pipeline Details
