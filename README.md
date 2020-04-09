@@ -1,17 +1,14 @@
 # **Finding Lane Lines on the Road** 
 
-
-[//]: # "Image References"
-
 [original]: ./test_images/challenge4.jpg "Original"
 [2-white-and-yellow]: ./test_images_output/3_yellow_and_white_challenge4.jpg	"White and Yellow"
 [3-gauss]: ./test_images_output/4_gauss_challenge4.jpg "Gauss Noise"
 [4-canny]: ./test_images_output/5_canny_challenge4.jpg "Canny Edge Detection"
-[5-roi]: ./test_images_output/6_roi_canny_challenge4.jpg	""'Canny' Image with Region of Interest""
+[5-roi]: ./test_images_output/6_roi_canny_challenge4.jpg	"Canny Image with Region of Interest"
 [6-interpolated]: ./test_images_output/7_interpolated_challenge4.jpg "Interpolated"
 [7-overlay]: ./test_images_output/8_overlay_challenge4.jpg "Overlay with Detected Lines"
 
-### Lane Detection Pipeline
+### Overview
 
 We find lane lines on a road by applying this set of operations in the pipeline:
 
@@ -26,11 +23,13 @@ We find lane lines on a road by applying this set of operations in the pipeline:
 
 ---
 
+### Pipeline Details
+
 Let's go over some of them in more detail, given that we have this original image, that I took from the challenge video: 
 
 ![original][]
 
-##### HSL Conversion and Color Filtering
+#### HSL Conversion and Color Filtering
 
 We convert image to HSL (HLS in OpenCV) to define yellow and white color thresholds in a more intuitive way. I found HSL color model more intuitive, and it was quite easy to define yellow color thresholds. This is the result I got after applying white and yellow color masks on the original image: 
 
@@ -38,7 +37,7 @@ We convert image to HSL (HLS in OpenCV) to define yellow and white color thresho
 
 
 
-##### Gaussian Blur
+#### Gaussian Blur
 
 Gaussian blur, also known as Gaussian smoothing, helps us to reduce image noise and extra details, that could serve as false positives in detecting image edges. It's a sensible step to do before applying Canny edge detection. Let's see what we get: 
 
@@ -46,7 +45,7 @@ Gaussian blur, also known as Gaussian smoothing, helps us to reduce image noise 
 
 As we can see, extra details got smoothed, which should help us to have more clear edges, specifically for lanes.
 
-##### Canny Edge Detection
+#### Canny Edge Detection
 
 To clearly find lane lines, we should first find edges in our image. We apply Canny edge detection, which finds edges by calculating image gradients and using using low and high gradient thresholds, defined by us, to find edges. More info on the algorithm can be found [here](http://fourier.eng.hmc.edu/e161/lectures/canny/node1.html).
 
@@ -56,13 +55,13 @@ This is what we get:
 
 
 
-##### Region of Interest
+#### Region of Interest
 
 We know that our lanes are going to be only in a defined area on an image, as camera is fixed. Let's apply it to our image: 
 
 ![5-roi][]
 
-##### Hough Lines Transform, Outliers and Interpolation
+#### Hough Lines Transform, Outliers and Interpolation
 
 **Hough Lines Transform**
 
@@ -90,7 +89,7 @@ Given that line equation is `y = slope*x + b`, we find that `b = y0 - slope*x0` 
 
 ![6-interpolated][]
 
-##### Overlay
+#### Overlay
 
 The last step would be to overlay our detected lane line with original image, using openCV `addWeighted` function: 
 
