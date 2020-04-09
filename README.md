@@ -1,56 +1,114 @@
 # **Finding Lane Lines on the Road** 
-[![Udacity - Self-Driving Car NanoDegree](https://s3.amazonaws.com/udacity-sdc/github/shield-carnd.svg)](http://www.udacity.com/drive)
 
-<img src="examples/laneLines_thirdPass.jpg" width="480" alt="Combined Image" />
 
-Overview
+[//]: # "Image References"
+
+[original]: ./test_images/challenge4.jpg "Original"
+[2-white-and-yellow]: ./test_images_output/3_yellow_and_white_challenge4.jpg	"White and Yellow"
+[3-gauss]: ./test_images_output/4_gauss_challenge4.jpg "Gauss Noise"
+[4-canny]: ./test_images_output/5_canny_challenge4.jpg "Canny Edge Detection"
+[5-roi]: ./test_images_output/6_roi_canny_challenge4.jpg	""'Canny' Image with Region of Interest""
+[6-interpolated]: ./test_images_output/7_interpolated_challenge4.jpg "Interpolated"
+[7-overlay]: ./test_images_output/8_overlay_challenge4.jpg "Overlay with Detected Lines"
+
+### Lane Detection Pipeline
+
+We find lane lines on a road by applying this set of operations in the pipeline:
+
+1. Turn image from RGB to HSL (HLS in OpenCV) for easier filtering of colors.
+2. Get only white and yellow colors.
+3. Apply gaussian blurr on the image to remove false positive edges, (good pre-processing step before applying canny edge detection).
+4. Do canny edge detection.
+5. Apply region of interest.
+6. Apply hough lines transform - detect lines.
+7. Remove outliers from detected lines. If video, remember line slopes over time, filter out outliers.
+8. Interpolate lane lines by applying least squares regression line.
+
 ---
 
-When we drive, we use our eyes to decide where to go.  The lines on the road that show us where the lanes are act as our constant reference for where to steer the vehicle.  Naturally, one of the first things we would like to do in developing a self-driving car is to automatically detect lane lines using an algorithm.
+Let's go over some of them in more detail, given that we have this original image, that I took from the challenge video: 
 
-In this project you will detect lane lines in images using Python and OpenCV.  OpenCV means "Open-Source Computer Vision", which is a package that has many useful tools for analyzing images.  
+![original][]
 
-To complete the project, two files will be submitted: a file containing project code and a file containing a brief write up explaining your solution. We have included template files to be used both for the [code](https://github.com/udacity/CarND-LaneLines-P1/blob/master/P1.ipynb) and the [writeup](https://github.com/udacity/CarND-LaneLines-P1/blob/master/writeup_template.md).The code file is called P1.ipynb and the writeup template is writeup_template.md 
+##### HSL Conversion and Color Filtering
 
-To meet specifications in the project, take a look at the requirements in the [project rubric](https://review.udacity.com/#!/rubrics/322/view)
+We convert image to HSL (HLS in OpenCV) to define yellow and white color thresholds in a more intuitive way. I found HSL color model more intuitive, and it was quite easy to define yellow color thresholds. This is the result I got after applying white and yellow color masks on the original image: 
 
-
-Creating a Great Writeup
----
-For this project, a great writeup should provide a detailed response to the "Reflection" section of the [project rubric](https://review.udacity.com/#!/rubrics/322/view). There are three parts to the reflection:
-
-1. Describe the pipeline
-
-2. Identify any shortcomings
-
-3. Suggest possible improvements
-
-We encourage using images in your writeup to demonstrate how your pipeline works.  
-
-All that said, please be concise!  We're not looking for you to write a book here: just a brief description.
-
-You're not required to use markdown for your writeup.  If you use another method please just submit a pdf of your writeup. Here is a link to a [writeup template file](https://github.com/udacity/CarND-LaneLines-P1/blob/master/writeup_template.md). 
+![2-white-and-yellow][]
 
 
-The Project
----
 
-## If you have already installed the [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) you should be good to go!   If not, you should install the starter kit to get started on this project. ##
+##### Gaussian Blur
 
-**Step 1:** Set up the [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) if you haven't already.
+Gaussian blur, also known as Gaussian smoothing, helps us to reduce image noise and extra details, that could serve as false positives in detecting image edges. It's a sensible step to do before applying Canny edge detection. Let's see what we get: 
 
-**Step 2:** Open the code in a Jupyter Notebook
+![3-gauss][]
 
-You will complete the project code in a Jupyter notebook.  If you are unfamiliar with Jupyter Notebooks, check out [Udacity's free course on Anaconda and Jupyter Notebooks](https://classroom.udacity.com/courses/ud1111) to get started.
+As we can see, extra details got smoothed, which should help us to have more clear edges, specifically for lanes.
 
-Jupyter is an Ipython notebook where you can run blocks of code and see results interactively.  All the code for this project is contained in a Jupyter notebook. To start Jupyter in your browser, use terminal to navigate to your project directory and then run the following command at the terminal prompt (be sure you've activated your Python 3 carnd-term1 environment as described in the [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) installation instructions!):
+##### Canny Edge Detection
 
-`> jupyter notebook`
+To clearly find lane lines, we should first find edges in our image. We apply Canny edge detection, which finds edges by calculating image gradients and using using low and high gradient thresholds, defined by us, to find edges. More info on the algorithm can be found [here](http://fourier.eng.hmc.edu/e161/lectures/canny/node1.html).
 
-A browser window will appear showing the contents of the current directory.  Click on the file called "P1.ipynb".  Another browser window will appear displaying the notebook.  Follow the instructions in the notebook to complete the project.  
+This is what we get: 
 
-**Step 3:** Complete the project and submit both the Ipython notebook and the project writeup
+![4-canny][]
 
-## How to write a README
-A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
+
+
+##### Region of Interest
+
+We know that our lanes are going to be only in a defined area on an image, as camera is fixed. Let's apply it to our image: 
+
+![5-roi][]
+
+##### Hough Lines Transform, Outliers and Interpolation
+
+**Hough Lines Transform**
+
+Hough transform takes a pixel, which is defined by (x, y) in image space, and finds all possible lines that can go through this point in hough space. In order to avoid dividing by zero problem when slope is 0, hough space lines are defined in polar coordinates with theta and rho parameters.
+
+So one points has a bunch of lines going through it. All these lines for one point form a single sinusoid in hough space. If we do this operation for all points, group of sinusoids that intersect with each other in a defined grid form a line in image space. 
+
+**Differentiate right and left lane lines**
+
+After we find all lines in our image, we have to understand which of them are on left lane vs right lane. Since our y axis goes down, all lines on the left lane should have negative slope, while all lines on the right lane should have positive slope. This is as simple as that. 
+
+**Lines Outliers**
+
+Our assumption is that most of the detected lines will be lane lines, but some lines would be noise, having slopes that are completely different from lane lines' slopes. To filter out noise, we find standard deviation and median of our left and right slopes, and filter out all slopes that are out of 2 standard deviation range.
+
+**Filtering Noise with Memory in Video Lane Lines Detection**
+
+In video, to reduce false positive lines even further, we can remember all previous slopes, and then apply 2 standard deviations filtering described above, where our slopes would be all slopes we observed over video so far.
+
+**Interpolating**
+
+We interpolate lines by applying least squares regression line. After finding regression line, OpenCV gives us back `xv, yv, x0, y0`. `xv and xy` is a unit vector, and `x0,y0` is a point on the fitted line. Our slope is `slope = vy/vx`. 
+
+Given that line equation is `y = slope*x + b`, we find that `b = y0 - slope*x0` . As we know our region of interest y values, we easily find x by doing: `x = (y - b) / slope`. Now we just draw the line. This is. the final result:  
+
+![6-interpolated][]
+
+##### Overlay
+
+The last step would be to overlay our detected lane line with original image, using openCV `addWeighted` function: 
+
+![7-overlay][]
+
+
+
+### Potential Shortcomings
+
+* Using 2 stdev range for outliers detection was a wild guess, which works, but on the video I can see lines are still "shaking" a little bit meaning that some false positive lines "drag" the interpolated line a bit.
+* Region of interest is hardcoded with percentages, but it might not work completely if a camera is fixed in another position, for example. 
+* My global slopes code would never reach production, as I would quickly hit out of memory. 
+
+
+### Possible Improvements
+
+* For lines outliers detection, improvement would be to find optimal c*stdev range to filter by; c=2 was an intuitive guess, which turned out. to work "ok". Other improvement would be to experiment with other approaches for outliers detection.
+* Rewrite global slopes state to be defined over a fixed time window, to avoid out-of-memory. Applying time window for remembering slopes might as well provide better filtering for false positive lines.
+* Try on more videos. See what goes wrong. Improve based on findings.
+* Tuning parameters for canny edge detection, gaussian noise kernel, hough lines transform could yield significant improvements, I guess. I would create a tool with parameter sliders, and quickly see the output based on changed parameters. 
 
