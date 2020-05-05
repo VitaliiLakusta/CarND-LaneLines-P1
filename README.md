@@ -8,6 +8,8 @@
 [6-interpolated]: ./test_images_output/7_interpolated_challenge4.jpg "Interpolated"
 [7-overlay]: ./test_images_output/8_overlay_challenge4.jpg "Overlay with Detected Lines"
 
+![7-overlay][]
+
 ### Overview
 
 We find lane lines on a road by applying this set of operations in the pipeline:
